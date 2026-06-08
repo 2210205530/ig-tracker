@@ -1,72 +1,71 @@
-// ── Storage ───────────────────────────────────────────
-function getSnaps() {
-  try { return JSON.parse(localStorage.getItem('followly_v3') || '[]'); }
-  catch { return []; }
-}
-function setSnaps(s) { localStorage.setItem('followly_v3', JSON.stringify(s)); }
+'use strict';
 
-// ── State ─────────────────────────────────────────────
-let pendingFollowers = null;
-let pendingFollowing = null;
+// ── Storage ────────────────────────────────────────────
+const STORE_KEY = 'followly_v4';
+function getSnaps() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; } }
+function setSnaps(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+
+// ── State ──────────────────────────────────────────────
+let pendingF = null;
+let pendingFo = null;
 let browseMode = 'ghost';
 
-// ── Init ──────────────────────────────────────────────
-document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-updateMeta();
-renderDashboard();
+// ── Boot ───────────────────────────────────────────────
+(function init() {
+  const d = new Date();
+  const fmt = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  setText('dash-date', fmt.toUpperCase());
+  updateMeta();
+  renderDashboard();
 
-// ── Nav ───────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + tab).classList.add('active');
-    if (tab === 'dashboard') renderDashboard();
-    if (tab === 'browse')    renderBrowse();
-    if (tab === 'history')   renderHistory();
+  document.getElementById('file-followers').addEventListener('change', function () { loadFile('followers', this); });
+  document.getElementById('file-following').addEventListener('change', function () { loadFile('following', this); });
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
-});
 
-function goTab(name) {
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      browseMode = btn.dataset.mode;
+      renderBrowse();
+    });
+  });
+
+  document.getElementById('browse-search').addEventListener('input', renderBrowse);
+})();
+
+// ── Tab switching ──────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
   if (name === 'dashboard') renderDashboard();
   if (name === 'browse')    renderBrowse();
   if (name === 'history')   renderHistory();
 }
 
-// ── Filter pills ──────────────────────────────────────
-document.querySelectorAll('.filter-pill').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    browseMode = btn.dataset.mode;
-    renderBrowse();
-  });
-});
+function goTab(name) { switchTab(name); }
 
-document.getElementById('browse-search').addEventListener('input', renderBrowse);
-
-// ── Parse Instagram JSON ──────────────────────────────
-function parseIG(text, type) {
-  const data = JSON.parse(text);
+// ── Instagram JSON parser ──────────────────────────────
+function parseIG(raw, type) {
+  const data = JSON.parse(raw);
   let items = [];
   if (type === 'followers') {
     items = Array.isArray(data) ? data : (data.relationships_followers || []);
   } else {
-    items = Array.isArray(data) ? data : (data.relationships_following || data);
+    items = Array.isArray(data) ? data : (data.relationships_following || (Array.isArray(data) ? data : []));
   }
   if (!Array.isArray(items)) items = [];
   return items.flatMap(item => {
-    if (item && item.string_list_data) return item.string_list_data.map(x => x.value).filter(Boolean);
-    if (item && item.value) return [item.value];
+    if (item?.string_list_data) return item.string_list_data.map(x => x.value).filter(Boolean);
+    if (item?.value) return [item.value];
     return [];
   }).filter(Boolean);
 }
 
-// ── File inputs ───────────────────────────────────────
+// ── File load ──────────────────────────────────────────
 function loadFile(type, input) {
   const file = input.files[0];
   if (!file) return;
@@ -76,15 +75,15 @@ function loadFile(type, input) {
     const st = document.getElementById('st-' + type);
     try {
       const users = parseIG(e.target.result, type);
-      if (!users.length) throw new Error('No users found');
-      if (type === 'followers') pendingFollowers = users;
-      else pendingFollowing = users;
-      st.textContent = '✓ ' + users.length.toLocaleString() + ' users';
+      if (!users.length) throw new Error('No usernames found');
+      if (type === 'followers') pendingF = users;
+      else pendingFo = users;
+      st.textContent = '✓  ' + users.length.toLocaleString() + ' accounts';
       st.className = 'dz-status ok';
       dz.classList.add('loaded');
       checkReady();
     } catch (err) {
-      st.textContent = '✗ ' + err.message;
+      st.textContent = '✗  ' + err.message;
       st.className = 'dz-status err';
       dz.classList.remove('loaded');
     }
@@ -92,37 +91,33 @@ function loadFile(type, input) {
   reader.readAsText(file);
 }
 
-document.getElementById('file-followers').addEventListener('change', function() { loadFile('followers', this); });
-document.getElementById('file-following').addEventListener('change', function() { loadFile('following', this); });
-
 function checkReady() {
-  const ready = !!(pendingFollowers && pendingFollowing);
+  const ready = !!(pendingF && pendingFo);
   document.getElementById('btn-save').disabled = !ready;
   const a = document.getElementById('upload-alert');
   if (ready) {
     a.style.display = 'block';
     a.className = 'upload-alert info';
-    a.textContent = '⚡ Both files ready — save snapshot to record this state.';
+    a.textContent = '⚡  Both files ready — save snapshot to record this state.';
   }
 }
 
-// ── Save snapshot ─────────────────────────────────────
+// ── Save snapshot ──────────────────────────────────────
 function saveSnapshot() {
   const snaps = getSnaps();
-  snaps.unshift({ ts: Date.now(), followers: pendingFollowers, following: pendingFollowing });
+  snaps.unshift({ ts: Date.now(), followers: pendingF, following: pendingFo });
   if (snaps.length > 50) snaps.length = 50;
   setSnaps(snaps);
   updateMeta();
   const a = document.getElementById('upload-alert');
   a.className = 'upload-alert success';
-  a.textContent = '✓ Snapshot saved! Head to Dashboard to see your stats.';
+  a.textContent = '✓  Snapshot saved — visit Dashboard to review your stats.';
   document.getElementById('btn-save').disabled = true;
 }
 
 function clearUpload() {
-  pendingFollowers = null;
-  pendingFollowing = null;
-  ['followers','following'].forEach(t => {
+  pendingF = null; pendingFo = null;
+  ['followers', 'following'].forEach(t => {
     document.getElementById('file-' + t).value = '';
     const st = document.getElementById('st-' + t);
     st.textContent = ''; st.className = 'dz-status';
@@ -133,14 +128,14 @@ function clearUpload() {
   document.getElementById('btn-save').disabled = true;
 }
 
-// ── Dashboard ─────────────────────────────────────────
+// ── Dashboard ──────────────────────────────────────────
 function renderDashboard() {
   const snaps = getSnaps();
-  const empty = document.getElementById('dash-empty');
+  const empty   = document.getElementById('dash-empty');
   const content = document.getElementById('dash-content');
 
   if (!snaps.length) {
-    empty.style.display = 'block';
+    empty.style.display = 'flex';
     content.style.display = 'none';
     return;
   }
@@ -155,13 +150,11 @@ function renderDashboard() {
   const ghosts = latest.following.filter(u => !fSet.has(u));
   const ratio  = (latest.followers.length / Math.max(1, latest.following.length)).toFixed(2);
 
-  // KPI values
   setText('kv-followers', latest.followers.length.toLocaleString());
   setText('kv-following', latest.following.length.toLocaleString());
-  setText('kv-ghost', ghosts.length.toLocaleString());
-  setText('kv-ratio', ratio);
-  const ratioNum = parseFloat(ratio);
-  setText('ks-ratio', ratioNum >= 1 ? '↑ Good standing' : '↓ Following more');
+  setText('kv-ghost',     ghosts.length.toLocaleString());
+  setText('kv-ratio',     ratio);
+  setText('ks-ratio',     parseFloat(ratio) >= 1 ? '↑ good standing' : '↓ following more');
 
   // Deltas
   const kdF  = document.getElementById('kd-followers');
@@ -178,78 +171,68 @@ function renderDashboard() {
   }
 
   // Changes section
-  const cWrap = document.getElementById('changes-wrap');
-  const cGrid = document.getElementById('changes-grid');
+  const changesSection = document.getElementById('changes-section');
   if (prev) {
     const pF   = new Set(prev.followers);
     const pFol = new Set(prev.following);
-    const newF   = latest.followers.filter(u => !pF.has(u));
-    const lostF  = prev.followers.filter(u => !fSet.has(u));
-    const newFol = latest.following.filter(u => !pFol.has(u));
-    const lostFol= prev.following.filter(u => !folSet.has(u));
+    const newF    = latest.followers.filter(u => !pF.has(u));
+    const lostF   = prev.followers.filter(u => !fSet.has(u));
+    const newFol  = latest.following.filter(u => !pFol.has(u));
+    const lostFol = prev.following.filter(u => !folSet.has(u));
 
-    setText('changes-since', 'vs ' + new Date(prev.ts).toLocaleDateString());
-    cWrap.style.display = 'block';
-    cGrid.innerHTML =
-      changeCard('New followers',        newF,   'chip-green') +
-      changeCard('Unfollowed you',       lostF,  'chip-red') +
-      changeCard('You started following',newFol, 'chip-cyan') +
-      changeCard('You unfollowed',       lostFol,'chip-violet');
+    setText('since-tag', 'vs ' + new Date(prev.ts).toLocaleDateString());
+    changesSection.style.display = 'block';
+    document.getElementById('changes-grid').innerHTML =
+      changeCard('New followers',        newF,    'chip-green')  +
+      changeCard('Unfollowed you',       lostF,   'chip-red')    +
+      changeCard('You started following',newFol,  'chip-indigo') +
+      changeCard('You unfollowed',       lostFol, 'chip-pink');
   } else {
-    cWrap.style.display = 'none';
+    changesSection.style.display = 'none';
   }
 
   // Ghost grid
   setText('ghost-count-tag', ghosts.length.toLocaleString() + ' accounts');
   const gg = document.getElementById('ghost-grid');
-  if (ghosts.length) {
-    gg.innerHTML = ghosts.map((u, i) => profileCard(u, i)).join('');
-  } else {
-    gg.innerHTML = '<div class="grid-empty">🎉 Everyone follows you back</div>';
-  }
+  gg.innerHTML = ghosts.length
+    ? ghosts.map((u, i) => profileCard(u, i)).join('')
+    : '<div class="grid-empty">everyone follows you back</div>';
 }
 
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
-// ── Change card ───────────────────────────────────────
-function changeCard(title, users, chipClass) {
-  const rows = users.length
+// ── Change card ────────────────────────────────────────
+function changeCard(title, users, chipCls) {
+  const body = users.length
     ? users.slice(0, 5).map(u => miniRow(u)).join('') +
-      (users.length > 5 ? `<div class="mini-more">+${users.length - 5} more</div>` : '')
-    : `<div class="mini-none">No changes</div>`;
+      (users.length > 5 ? `<p class="mini-more">+${users.length - 5} more</p>` : '')
+    : '<p class="mini-none">no changes</p>';
 
   return `<div class="change-card">
-    <div class="change-card-head">
-      <span class="change-card-title">${esc(title)}</span>
-      <span class="chip ${chipClass}">${users.length}</span>
+    <div class="cc-head">
+      <span class="cc-title">${esc(title)}</span>
+      <span class="chip ${chipCls}">${users.length}</span>
     </div>
-    <div class="mini-list">${rows}</div>
+    <div class="mini-list">${body}</div>
   </div>`;
 }
 
-// ── Profile card ──────────────────────────────────────
-function profileCard(username, index = 0) {
-  const init = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
-  const url  = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
-  const delay = Math.min(index * 30, 600);
-  return `<div class="profile-card" style="animation-delay:${delay}ms" onclick="window.open('${url}','_blank')">
-    <div class="pc-avatar">
-      <div class="pc-avatar-ring"></div>
-      ${init}
+// ── Profile card ───────────────────────────────────────
+function profileCard(username, idx = 0) {
+  const init  = username.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '??';
+  const url   = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
+  const delay = Math.min(idx * 28, 700);
+  return `<div class="profile-card" style="animation-delay:${delay}ms" onclick="window.open('${url}','_blank')" role="link" tabindex="0">
+    <div class="pc-avatar-wrap">
+      <div class="pc-aura"></div>
+      <div class="pc-avatar">${init}</div>
     </div>
-    <div class="pc-name">@${esc(username)}</div>
-    <a class="pc-open" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-      View ↗
-    </a>
+    <p class="pc-name">@${esc(username)}</p>
+    <a class="pc-open" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View ↗</a>
   </div>`;
 }
 
-// ── Mini row ──────────────────────────────────────────
+// ── Mini profile row ───────────────────────────────────
 function miniRow(username) {
-  const init = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
+  const init = username.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '??';
   const url  = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
   return `<a class="mini-row" href="${url}" target="_blank" rel="noopener">
     <div class="mini-av">${init}</div>
@@ -258,15 +241,15 @@ function miniRow(username) {
   </a>`;
 }
 
-// ── Browse ────────────────────────────────────────────
+// ── Browse ─────────────────────────────────────────────
 function renderBrowse() {
-  const snaps  = getSnaps();
-  const grid   = document.getElementById('browse-grid');
-  const count  = document.getElementById('browse-count');
+  const snaps = getSnaps();
+  const grid  = document.getElementById('browse-grid');
+  const count = document.getElementById('browse-count');
 
   if (!snaps.length) {
-    grid.innerHTML = '<div class="grid-empty">No snapshots yet. Upload your data first.</div>';
-    count.textContent = 'No data';
+    grid.innerHTML = '<div class="grid-empty">no snapshots yet — upload your data first</div>';
+    count.textContent = '';
     return;
   }
 
@@ -275,46 +258,45 @@ function renderBrowse() {
   const q      = document.getElementById('browse-search').value.toLowerCase().trim();
 
   let list;
-  if (browseMode === 'ghost')      list = latest.following.filter(u => !fSet.has(u));
+  if      (browseMode === 'ghost')     list = latest.following.filter(u => !fSet.has(u));
   else if (browseMode === 'followers') list = [...latest.followers];
-  else                             list = [...latest.following];
+  else                                 list = [...latest.following];
 
   if (q) list = list.filter(u => u.toLowerCase().includes(q));
 
-  count.textContent = list.length.toLocaleString() + ' accounts';
+  count.textContent = (list.length.toLocaleString() + ' accounts').toUpperCase();
 
   if (!list.length) {
-    grid.innerHTML = '<div class="grid-empty">No accounts found.</div>';
+    grid.innerHTML = '<div class="grid-empty">no accounts found</div>';
     return;
   }
 
-  const shown = list.slice(0, 120);
-  grid.innerHTML = shown.map((u, i) => profileCard(u, i)).join('') +
+  grid.innerHTML = list.slice(0, 120).map((u, i) => profileCard(u, i)).join('') +
     (list.length > 120
-      ? `<div class="grid-empty" style="grid-column:1/-1">Showing 120 of ${list.length} — refine with search</div>`
+      ? `<div class="grid-empty" style="grid-column:1/-1">showing 120 of ${list.length} — use search to narrow down</div>`
       : '');
 }
 
-// ── History ───────────────────────────────────────────
+// ── History ────────────────────────────────────────────
 function renderHistory() {
   const snaps = getSnaps();
   const list  = document.getElementById('history-list');
 
   if (!snaps.length) {
-    list.innerHTML = '<div class="grid-empty" style="display:block;text-align:center;padding:3rem;">No snapshots saved yet.</div>';
+    list.innerHTML = '<div class="grid-empty" style="display:block;text-align:center;padding:3rem;">no snapshots saved yet</div>';
     return;
   }
 
   list.innerHTML = snaps.map((s, i) => `
     <div class="history-card">
-      <span class="hc-num">#${snaps.length - i}</span>
+      <span class="hc-idx">#${snaps.length - i}</span>
       <div class="hc-info">
-        <div class="hc-time">${new Date(s.ts).toLocaleString()}</div>
-        <div class="hc-meta">${s.followers.length.toLocaleString()} followers · ${s.following.length.toLocaleString()} following</div>
+        <p class="hc-time">${new Date(s.ts).toLocaleString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</p>
+        <p class="hc-meta">${s.followers.length.toLocaleString()} followers  ·  ${s.following.length.toLocaleString()} following</p>
       </div>
       ${i === 0
-        ? '<span class="hc-badge">Latest</span>'
-        : `<button class="hc-del" onclick="deleteSnap(${i})" title="Delete">✕</button>`}
+        ? '<span class="hc-latest">Latest</span>'
+        : `<button class="hc-del" onclick="deleteSnap(${i})" title="Delete snapshot">✕</button>`}
     </div>`).join('');
 }
 
@@ -329,16 +311,21 @@ function deleteSnap(i) {
 
 function clearAll() {
   if (!confirm('Delete ALL snapshots? This cannot be undone.')) return;
-  localStorage.removeItem('followly_v3');
+  localStorage.removeItem(STORE_KEY);
   updateMeta();
   renderHistory();
 }
 
-// ── Utilities ─────────────────────────────────────────
+// ── Utilities ──────────────────────────────────────────
 function updateMeta() {
-  const n = getSnaps().length;
-  const el = document.getElementById('snap-count-side');
+  const n  = getSnaps().length;
+  const el = document.getElementById('snap-label');
   if (el) el.textContent = n + (n === 1 ? ' snapshot' : ' snapshots');
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
 }
 
 function esc(s) {
