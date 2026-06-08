@@ -1,35 +1,41 @@
-// ── Storage helpers ──────────────────────────────────
-function getSnapshots() {
-  try { return JSON.parse(localStorage.getItem('ig_snapshots') || '[]'); }
+// ── Storage ───────────────────────────────────────────
+function getSnaps() {
+  try { return JSON.parse(localStorage.getItem('followly_snaps') || '[]'); }
   catch { return []; }
 }
-function saveSnapshots(snaps) {
-  localStorage.setItem('ig_snapshots', JSON.stringify(snaps));
-}
+function setSnaps(s) { localStorage.setItem('followly_snaps', JSON.stringify(s)); }
 
 // ── State ─────────────────────────────────────────────
-let currentFollowers = null;
-let currentFollowing = null;
-let browseMode = 'nonfollowers';
+let pendingFollowers = null;
+let pendingFollowing = null;
+let browseMode = 'ghost';
 
 // ── Tab navigation ────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(btn => {
+document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const tab = btn.dataset.tab;
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
-    if (tab === 'changes') renderChanges();
-    if (tab === 'browse') renderBrowse();
-    if (tab === 'history') renderHistory();
+    if (tab === 'dashboard') renderDashboard();
+    if (tab === 'browse')    renderBrowse();
+    if (tab === 'history')   renderHistory();
   });
 });
 
-// ── Browse filter buttons ─────────────────────────────
-document.querySelectorAll('.filter-btn').forEach(btn => {
+function goTab(name) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'browse')    renderBrowse();
+  if (name === 'history')   renderHistory();
+}
+
+// ── Browse filter pills ───────────────────────────────
+document.querySelectorAll('.pill').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     browseMode = btn.dataset.mode;
     renderBrowse();
@@ -38,17 +44,14 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 document.getElementById('browse-search').addEventListener('input', renderBrowse);
 
-// ── File loading ──────────────────────────────────────
-function parseInstagramJSON(text, type) {
+// ── Parse Instagram JSON ──────────────────────────────
+function parseIG(text, type) {
   const data = JSON.parse(text);
   let items = [];
   if (type === 'followers') {
-    if (Array.isArray(data)) items = data;
-    else if (data.relationships_followers) items = data.relationships_followers;
+    items = Array.isArray(data) ? data : (data.relationships_followers || []);
   } else {
-    if (Array.isArray(data)) items = data;
-    else if (data.relationships_following) items = data.relationships_following;
-    else items = data;
+    items = Array.isArray(data) ? data : (data.relationships_following || data);
   }
   return items.flatMap(item => {
     if (item.string_list_data) return item.string_list_data.map(x => x.value);
@@ -57,244 +60,282 @@ function parseInstagramJSON(text, type) {
   }).filter(Boolean);
 }
 
+// ── File inputs ───────────────────────────────────────
 function loadFile(type, input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const statusEl = document.getElementById('status-' + type);
+    const dzEl = document.getElementById('dz-' + type);
+    const stEl = document.getElementById('st-' + type);
     try {
-      const users = parseInstagramJSON(e.target.result, type);
-      if (users.length === 0) throw new Error('No usernames found — check the file');
-      if (type === 'followers') currentFollowers = users;
-      else currentFollowing = users;
-      statusEl.textContent = '✓ ' + users.length + ' users loaded';
-      statusEl.className = 'upload-status ok';
+      const users = parseIG(e.target.result, type);
+      if (!users.length) throw new Error('No users found');
+      if (type === 'followers') pendingFollowers = users;
+      else pendingFollowing = users;
+      stEl.textContent = '✓ ' + users.length.toLocaleString() + ' loaded';
+      stEl.className = 'dz-status ok';
+      dzEl.classList.add('loaded');
       checkReady();
     } catch (err) {
-      statusEl.textContent = '✗ ' + err.message;
-      statusEl.className = 'upload-status err';
+      stEl.textContent = '✗ ' + err.message;
+      stEl.className = 'dz-status err';
+      dzEl.classList.remove('loaded');
     }
   };
   reader.readAsText(file);
 }
 
-// Wire up file inputs
 document.getElementById('file-followers').addEventListener('change', function() { loadFile('followers', this); });
 document.getElementById('file-following').addEventListener('change', function() { loadFile('following', this); });
 
 function checkReady() {
-  const ready = currentFollowers !== null && currentFollowing !== null;
+  const ready = pendingFollowers && pendingFollowing;
   document.getElementById('btn-save').disabled = !ready;
-  const alert = document.getElementById('upload-alert');
+  const a = document.getElementById('upload-alert');
   if (ready) {
-    alert.style.display = 'block';
-    alert.className = 'alert alert-info';
-    alert.textContent = 'Both files loaded. Click "Save snapshot" to record this state and detect changes next time.';
-  } else {
-    alert.style.display = 'none';
+    a.style.display = 'block';
+    a.className = 'alert alert-info';
+    a.textContent = '✓ Both files ready! Click "Save snapshot" to record this state.';
   }
 }
 
 // ── Save snapshot ─────────────────────────────────────
 function saveSnapshot() {
-  const snaps = getSnapshots();
-  snaps.unshift({ ts: Date.now(), followers: currentFollowers, following: currentFollowing });
+  const snaps = getSnaps();
+  snaps.unshift({ ts: Date.now(), followers: pendingFollowers, following: pendingFollowing });
   if (snaps.length > 50) snaps.length = 50;
-  saveSnapshots(snaps);
-  updateSnapCount();
-
-  const alert = document.getElementById('upload-alert');
-  alert.className = 'alert alert-success';
-  alert.textContent = '✓ Snapshot saved! Go to "Changes" to see what changed since last time.';
+  setSnaps(snaps);
+  updateSnapPill();
+  const a = document.getElementById('upload-alert');
+  a.className = 'alert alert-success';
+  a.textContent = '🎉 Snapshot saved! Go to Dashboard to see your stats.';
   document.getElementById('btn-save').disabled = true;
 }
 
 function clearUpload() {
-  currentFollowers = null;
-  currentFollowing = null;
-  document.getElementById('file-followers').value = '';
-  document.getElementById('file-following').value = '';
-  ['followers', 'following'].forEach(t => {
-    const el = document.getElementById('status-' + t);
-    el.textContent = '';
-    el.className = 'upload-status';
+  pendingFollowers = null;
+  pendingFollowing = null;
+  ['followers','following'].forEach(t => {
+    document.getElementById('file-' + t).value = '';
+    const st = document.getElementById('st-' + t);
+    st.textContent = ''; st.className = 'dz-status';
+    document.getElementById('dz-' + t).classList.remove('loaded');
   });
   document.getElementById('upload-alert').style.display = 'none';
   document.getElementById('btn-save').disabled = true;
 }
 
-// ── Changes tab ───────────────────────────────────────
-function renderChanges() {
-  const el = document.getElementById('changes-content');
-  const snaps = getSnapshots();
+// ── Dashboard ─────────────────────────────────────────
+function renderDashboard() {
+  const snaps = getSnaps();
+  const empty = document.getElementById('dash-empty');
+  const content = document.getElementById('dash-content');
 
-  if (snaps.length === 0) {
-    el.innerHTML = '<div class="empty">No snapshots yet. Upload your Instagram data first.</div>';
+  if (!snaps.length) {
+    empty.style.display = 'block';
+    content.style.display = 'none';
     return;
   }
 
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
   const latest = snaps[0];
-  const prev = snaps[1];
-  const fSet = new Set(latest.followers);
+  const prev   = snaps[1];
+  const fSet   = new Set(latest.followers);
   const folSet = new Set(latest.following);
-  const notFollowingBack = latest.following.filter(u => !fSet.has(u));
-  const youDontFollowBack = latest.followers.filter(u => !folSet.has(u));
+  const ghosts = latest.following.filter(u => !fSet.has(u));
+  const ratio  = latest.followers.length / Math.max(1, latest.following.length);
 
-  let html = `<div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Followers</div>
-      <div class="stat-value">${latest.followers.length}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Following</div>
-      <div class="stat-value">${latest.following.length}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Don't follow back</div>
-      <div class="stat-value red">${notFollowingBack.length}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">You don't follow back</div>
-      <div class="stat-value accent">${youDontFollowBack.length}</div>
-    </div>
-  </div>`;
+  // Stat cards
+  setValue('sv-followers', latest.followers.length.toLocaleString());
+  setValue('sv-following', latest.following.length.toLocaleString());
+  setValue('sv-ghost', ghosts.length.toLocaleString());
+  setValue('sv-ratio', ratio.toFixed(2));
+  document.getElementById('ss-ratio').textContent =
+    ratio >= 1 ? '👍 More followers than following' : '⚠ Following more than followers';
 
+  // Deltas vs previous snapshot
+  const sdF  = document.getElementById('sd-followers');
+  const sdFo = document.getElementById('sd-following');
   if (prev) {
-    const pF = new Set(prev.followers);
-    const pFol = new Set(prev.following);
-    const newFollowers = latest.followers.filter(u => !pF.has(u));
-    const lostFollowers = prev.followers.filter(u => !fSet.has(u));
-    const newFollowing = latest.following.filter(u => !pFol.has(u));
-    const lostFollowing = prev.following.filter(u => !folSet.has(u));
-
-    const prevDate = new Date(prev.ts).toLocaleString();
-    html += `<p style="font-size:12px;color:var(--text-3);font-family:var(--mono);margin-bottom:1.5rem;">Since ${prevDate}</p>`;
-
-    const hasChanges = newFollowers.length || lostFollowers.length || newFollowing.length || lostFollowing.length;
-    if (!hasChanges) {
-      html += '<div class="no-changes">— No changes detected since last snapshot —</div>';
-    } else {
-      html += changeBlock('New followers', newFollowers, 'badge-green');
-      html += changeBlock('Unfollowed you', lostFollowers, 'badge-red');
-      html += changeBlock('You started following', newFollowing, 'badge-blue');
-      html += changeBlock('You unfollowed', lostFollowing, 'badge-amber');
-    }
+    const df = latest.followers.length - prev.followers.length;
+    const dfo = latest.following.length - prev.following.length;
+    sdF.textContent  = (df >= 0 ? '+' : '') + df + ' since last snapshot';
+    sdF.className    = 'shc-delta ' + (df >= 0 ? 'up' : 'down');
+    sdFo.textContent = (dfo >= 0 ? '+' : '') + dfo + ' since last snapshot';
+    sdFo.className   = 'shc-delta ' + (dfo >= 0 ? 'up' : 'down');
   } else {
-    html += `<div class="alert alert-info" style="display:block;margin-bottom:1.5rem;">Only one snapshot saved. Upload again later to detect changes over time.</div>`;
-    html += changeBlock('People you follow who don\'t follow back', notFollowingBack, 'badge-red');
+    sdF.textContent = ''; sdFo.textContent = '';
   }
 
-  el.innerHTML = html;
+  // Changes section
+  const cGrid = document.getElementById('changes-grid');
+  const cTitle = document.getElementById('changes-title');
+  if (prev) {
+    const pF   = new Set(prev.followers);
+    const pFol = new Set(prev.following);
+    const newF  = latest.followers.filter(u => !pF.has(u));
+    const lostF = prev.followers.filter(u => !fSet.has(u));
+    const newFo  = latest.following.filter(u => !pFol.has(u));
+    const lostFo = prev.following.filter(u => !folSet.has(u));
+
+    cTitle.style.display = 'flex';
+    cTitle.textContent   = '📣 Changes since ' + new Date(prev.ts).toLocaleDateString();
+    cGrid.style.display  = 'grid';
+    cGrid.innerHTML =
+      changeCard('👋 New followers',      newF,  'badge-green') +
+      changeCard('💔 Unfollowed you',     lostF, 'badge-red') +
+      changeCard('➕ You started following', newFo, 'badge-cyan') +
+      changeCard('➖ You unfollowed',      lostFo,'badge-amber');
+  } else {
+    cTitle.style.display = 'none';
+    cGrid.style.display  = 'none';
+  }
+
+  // Ghost grid
+  document.getElementById('ghost-grid').innerHTML = ghosts.length
+    ? ghosts.map(u => profileCard(u)).join('')
+    : '<div class="grid-empty">🎉 Everyone follows you back!</div>';
 }
 
-function changeBlock(title, users, badgeClass) {
-  if (users.length === 0) return '';
-  let html = `<div class="change-block">
-    <div class="change-heading">${title} <span class="badge ${badgeClass}">${users.length}</span></div>
-    <div class="user-list">`;
-  users.slice(0, 60).forEach(u => {
-    html += userRow(u);
-  });
-  if (users.length > 60) html += `<div class="user-more">+ ${users.length - 60} more</div>`;
-  html += '</div></div>';
-  return html;
+function setValue(id, val) { document.getElementById(id).textContent = val; }
+
+function changeCard(title, users, badgeClass) {
+  if (!users.length) return `
+    <div class="change-card">
+      <div class="change-card-header">
+        <span class="change-card-title">${title}</span>
+        <span class="count-badge ${badgeClass}">0</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-3);padding:4px 0;">No changes</div>
+    </div>`;
+
+  const rows = users.slice(0, 5).map(u => miniProfile(u)).join('');
+  const more = users.length > 5
+    ? `<div class="mini-more">+${users.length - 5} more</div>` : '';
+  return `
+    <div class="change-card">
+      <div class="change-card-header">
+        <span class="change-card-title">${title}</span>
+        <span class="count-badge ${badgeClass}">${users.length}</span>
+      </div>
+      <div class="mini-profile-list">${rows}${more}</div>
+    </div>`;
 }
 
-function userRow(u) {
-  const initials = u.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '??';
-  return `<div class="user-row">
-    <div class="avatar">${initials}</div>
-    <span class="username">${escHtml(u)}</span>
-    <a class="user-link" href="https://instagram.com/${encodeURIComponent(u)}" target="_blank" rel="noopener">↗ ig</a>
-  </div>`;
+// ── Profile card (grid) ───────────────────────────────
+function profileCard(username) {
+  const initials = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
+  const url = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
+  return `
+    <div class="profile-card" onclick="window.open('${url}','_blank')">
+      <div class="pc-avatar">${initials}</div>
+      <div class="pc-name">@${esc(username)}</div>
+      <a class="pc-link-btn" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+        View on Instagram ↗
+      </a>
+    </div>`;
 }
 
-// ── Browse tab ────────────────────────────────────────
+// ── Mini profile row (inside change cards) ────────────
+function miniProfile(username) {
+  const initials = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
+  const url = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
+  return `
+    <a class="mini-profile" href="${url}" target="_blank" rel="noopener">
+      <div class="mini-avatar">${initials}</div>
+      <span class="mini-name">@${esc(username)}</span>
+      <span class="mini-arrow">↗</span>
+    </a>`;
+}
+
+// ── Browse ────────────────────────────────────────────
 function renderBrowse() {
-  const el = document.getElementById('browse-content');
-  const snaps = getSnapshots();
+  const snaps = getSnaps();
+  const grid  = document.getElementById('browse-grid');
+  const count = document.getElementById('browse-count');
 
-  if (snaps.length === 0) {
-    el.innerHTML = '<div class="empty">No snapshots yet.</div>';
+  if (!snaps.length) {
+    grid.innerHTML = '<div class="grid-empty">No snapshots yet. Upload your data first.</div>';
+    count.textContent = '';
     return;
   }
 
   const latest = snaps[0];
-  const q = document.getElementById('browse-search').value.toLowerCase().trim();
-  const fSet = new Set(latest.followers);
-  const folSet = new Set(latest.following);
+  const fSet   = new Set(latest.followers);
+  const q      = document.getElementById('browse-search').value.toLowerCase().trim();
 
   let list;
-  if (browseMode === 'nonfollowers') list = latest.following.filter(u => !fSet.has(u));
+  if (browseMode === 'ghost')      list = latest.following.filter(u => !fSet.has(u));
   else if (browseMode === 'followers') list = [...latest.followers];
-  else list = [...latest.following];
+  else                             list = [...latest.following];
 
   if (q) list = list.filter(u => u.toLowerCase().includes(q));
 
-  if (list.length === 0) {
-    el.innerHTML = '<div class="empty">No users found.</div>';
+  count.textContent = list.length.toLocaleString() + ' accounts';
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="grid-empty">No accounts found.</div>';
     return;
   }
 
-  let html = `<div class="user-list">`;
-  list.slice(0, 100).forEach(u => { html += userRow(u); });
-  if (list.length > 100) html += `<div class="user-more">+ ${list.length - 100} more — use search to narrow down</div>`;
-  html += '</div>';
-  el.innerHTML = html;
+  const shown = list.slice(0, 120);
+  grid.innerHTML = shown.map(u => profileCard(u)).join('') +
+    (list.length > 120 ? `<div class="grid-empty" style="grid-column:1/-1;">Showing 120 of ${list.length} — use search to narrow down</div>` : '');
 }
 
-// ── History tab ───────────────────────────────────────
+// ── History ───────────────────────────────────────────
 function renderHistory() {
-  const el = document.getElementById('history-content');
-  const snaps = getSnapshots();
+  const snaps = getSnaps();
+  const list  = document.getElementById('history-list');
 
-  if (snaps.length === 0) {
-    el.innerHTML = '<div class="empty">No snapshots saved yet.</div>';
+  if (!snaps.length) {
+    list.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-3);font-size:14px;font-weight:600;">No snapshots saved yet.</div>';
     return;
   }
 
-  let html = '<div class="snapshot-list">';
-  snaps.forEach((s, i) => {
-    html += `<div class="snapshot-row">
-      <span class="snapshot-index">#${snaps.length - i}</span>
-      <span class="snapshot-time">${new Date(s.ts).toLocaleString()}</span>
-      <span class="snapshot-meta">${s.followers.length} followers · ${s.following.length} following</span>
+  list.innerHTML = snaps.map((s, i) => `
+    <div class="history-card">
+      <div class="hc-index">#${snaps.length - i}</div>
+      <div class="hc-info">
+        <div class="hc-time">${new Date(s.ts).toLocaleString()}</div>
+        <div class="hc-meta">${s.followers.length.toLocaleString()} followers · ${s.following.length.toLocaleString()} following</div>
+      </div>
       ${i === 0
-        ? '<span class="snapshot-tag">Latest</span>'
-        : `<button class="snapshot-del" onclick="deleteSnapshot(${i})" title="Delete this snapshot">✕</button>`
+        ? '<span class="hc-latest">Latest</span>'
+        : `<button class="hc-del" onclick="deleteSnap(${i})" title="Delete">✕</button>`
       }
-    </div>`;
-  });
-  html += '</div>';
-  el.innerHTML = html;
+    </div>`).join('');
 }
 
-function deleteSnapshot(i) {
+function deleteSnap(i) {
   if (!confirm('Delete this snapshot?')) return;
-  const snaps = getSnapshots();
+  const snaps = getSnaps();
   snaps.splice(i, 1);
-  saveSnapshots(snaps);
-  updateSnapCount();
+  setSnaps(snaps);
+  updateSnapPill();
   renderHistory();
 }
 
 function clearAll() {
   if (!confirm('Delete ALL snapshots? This cannot be undone.')) return;
-  localStorage.removeItem('ig_snapshots');
-  updateSnapCount();
+  localStorage.removeItem('followly_snaps');
+  updateSnapPill();
   renderHistory();
 }
 
 // ── Utilities ─────────────────────────────────────────
-function updateSnapCount() {
-  const n = getSnapshots().length;
-  document.getElementById('snap-count').textContent = n + (n === 1 ? ' snapshot' : ' snapshots');
+function updateSnapPill() {
+  const n = getSnaps().length;
+  document.getElementById('snap-pill').textContent = n + (n === 1 ? ' snapshot' : ' snapshots');
 }
 
-function escHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function esc(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Init ──────────────────────────────────────────────
-updateSnapCount();
+updateSnapPill();
+renderDashboard();
