@@ -3,125 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IG Tracker — Instagram Follower Monitor</title>
+  <title>Instagram Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="app">
+  <!-- Top nav -->
+  <header class="topnav">
+    <div class="topnav-brand">
+      <div class="brand-icon">𝓕</div>
+      <span class="brand-name">Followly</span>
+    </div>
+    <nav class="topnav-links">
+      <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="nav-btn" data-tab="upload">Upload</button>
+      <button class="nav-btn" data-tab="browse">Browse</button>
+      <button class="nav-btn" data-tab="history">History</button>
+    </nav>
+    <div class="topnav-meta">
+      <span class="snap-pill" id="snap-pill">0 snapshots</span>
+    </div>
+  </header>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <span class="logo-icon">◈</span>
-        <span class="logo-text">IG Tracker</span>
+  <div class="page-wrap">
+
+    <!-- ── DASHBOARD ───────────────────────────── -->
+    <section id="tab-dashboard" class="tab active">
+      <div id="dash-empty" class="empty-state">
+        <div class="empty-icon">📊</div>
+        <h2>No data yet</h2>
+        <p>Upload your Instagram JSON export to get started.</p>
+        <button class="btn btn-primary" onclick="goTab('upload')">Upload data →</button>
       </div>
 
-      <nav class="nav">
-        <button class="nav-item active" data-tab="upload">
-          <span class="nav-icon">↑</span> Upload
-        </button>
-        <button class="nav-item" data-tab="changes">
-          <span class="nav-icon">△</span> Changes
-        </button>
-        <button class="nav-item" data-tab="browse">
-          <span class="nav-icon">◎</span> Browse
-        </button>
-        <button class="nav-item" data-tab="history">
-          <span class="nav-icon">⊙</span> History
-        </button>
-      </nav>
+      <div id="dash-content" style="display:none;">
+        <!-- Hero stats -->
+        <div class="stats-hero">
+          <div class="stat-hero-card" id="sc-followers">
+            <div class="shc-label">Followers</div>
+            <div class="shc-value" id="sv-followers">—</div>
+            <div class="shc-delta" id="sd-followers"></div>
+          </div>
+          <div class="stat-hero-card" id="sc-following">
+            <div class="shc-label">Following</div>
+            <div class="shc-value" id="sv-following">—</div>
+            <div class="shc-delta" id="sd-following"></div>
+          </div>
+          <div class="stat-hero-card accent" id="sc-ghost">
+            <div class="shc-label">Don't follow back</div>
+            <div class="shc-value" id="sv-ghost">—</div>
+            <div class="shc-sub">people you follow</div>
+          </div>
+          <div class="stat-hero-card" id="sc-ratio">
+            <div class="shc-label">Follower ratio</div>
+            <div class="shc-value" id="sv-ratio">—</div>
+            <div class="shc-sub" id="ss-ratio"></div>
+          </div>
+        </div>
 
-      <div class="sidebar-footer">
-        <div class="snapshot-count" id="snap-count">0 snapshots</div>
-        <div class="sidebar-hint">Data saved in your browser</div>
+        <!-- Changes row -->
+        <div class="section-title" id="changes-title" style="display:none;"></div>
+        <div class="changes-grid" id="changes-grid" style="display:none;"></div>
+
+        <!-- Ghost list -->
+        <div class="section-title">People who don't follow you back</div>
+        <div class="profile-grid" id="ghost-grid"></div>
       </div>
-    </aside>
+    </section>
 
-    <!-- Main content -->
-    <main class="main">
-
-      <!-- Upload Tab -->
-      <section id="tab-upload" class="tab active">
-        <div class="page-header">
+    <!-- ── UPLOAD ──────────────────────────────── -->
+    <section id="tab-upload" class="tab">
+      <div class="upload-page">
+        <div class="upload-page-header">
           <h1>Upload your data</h1>
-          <p>Export your Instagram data as JSON, then upload both files below.</p>
+          <p>Get your Instagram export, then drop both JSON files below.</p>
         </div>
 
-        <div class="howto-card">
-          <div class="howto-title">How to export from Instagram</div>
-          <ol class="howto-steps">
-            <li>Open Instagram → <strong>Settings</strong> → <strong>Your activity</strong></li>
-            <li>Tap <strong>Download your information</strong> → <strong>Download or transfer information</strong></li>
-            <li>Select <strong>Followers and following</strong>, choose <strong>JSON</strong> format</li>
-            <li>Request download — Instagram will email you a zip file</li>
-            <li>Unzip and upload <code>followers_1.json</code> and <code>following.json</code> below</li>
-          </ol>
+        <div class="howto">
+          <div class="howto-step">
+            <div class="step-num">1</div>
+            <div class="step-text">Open Instagram → <strong>Settings</strong> → <strong>Your activity</strong> → <strong>Download your information</strong></div>
+          </div>
+          <div class="howto-step">
+            <div class="step-num">2</div>
+            <div class="step-text">Select <strong>Followers and following</strong>, choose <strong>JSON</strong> format, then request the download</div>
+          </div>
+          <div class="howto-step">
+            <div class="step-num">3</div>
+            <div class="step-text">Instagram will email you a zip — unzip it, then upload <code>followers_1.json</code> and <code>following.json</code> below</div>
+          </div>
         </div>
 
-        <div class="upload-grid">
-          <div class="upload-card" id="drop-followers" onclick="document.getElementById('file-followers').click()">
-            <div class="upload-icon">↓</div>
-            <div class="upload-label">Followers</div>
-            <div class="upload-hint">followers_1.json</div>
+        <div class="drop-grid">
+          <label class="drop-zone" id="dz-followers" for="file-followers">
+            <div class="dz-emoji">👥</div>
+            <div class="dz-title">Followers</div>
+            <div class="dz-hint">followers_1.json</div>
+            <div class="dz-status" id="st-followers"></div>
             <input type="file" id="file-followers" accept=".json">
-            <div class="upload-status" id="status-followers"></div>
-          </div>
-          <div class="upload-card" id="drop-following" onclick="document.getElementById('file-following').click()">
-            <div class="upload-icon">↓</div>
-            <div class="upload-label">Following</div>
-            <div class="upload-hint">following.json</div>
+          </label>
+          <label class="drop-zone" id="dz-following" for="file-following">
+            <div class="dz-emoji">➕</div>
+            <div class="dz-title">Following</div>
+            <div class="dz-hint">following.json</div>
+            <div class="dz-status" id="st-following"></div>
             <input type="file" id="file-following" accept=".json">
-            <div class="upload-status" id="status-following"></div>
-          </div>
+          </label>
         </div>
 
         <div id="upload-alert" class="alert" style="display:none;"></div>
 
         <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save" disabled onclick="saveSnapshot()">Save snapshot</button>
-          <button class="btn" onclick="clearUpload()">Clear</button>
+          <button class="btn btn-primary" id="btn-save" disabled onclick="saveSnapshot()">💾 Save snapshot</button>
+          <button class="btn btn-ghost" onclick="clearUpload()">Clear</button>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Changes Tab -->
-      <section id="tab-changes" class="tab">
-        <div class="page-header">
-          <h1>Changes</h1>
-          <p>What changed between your latest two snapshots.</p>
+    <!-- ── BROWSE ──────────────────────────────── -->
+    <section id="tab-browse" class="tab">
+      <div class="browse-bar">
+        <div class="filter-pills" id="filter-pills">
+          <button class="pill active" data-mode="ghost">👻 Don't follow back</button>
+          <button class="pill" data-mode="followers">👥 Followers</button>
+          <button class="pill" data-mode="following">➕ Following</button>
         </div>
-        <div id="changes-content"></div>
-      </section>
+        <input class="search-input" id="browse-search" type="search" placeholder="🔍  Search username…">
+      </div>
+      <div class="browse-count" id="browse-count"></div>
+      <div id="browse-grid" class="profile-grid"></div>
+    </section>
 
-      <!-- Browse Tab -->
-      <section id="tab-browse" class="tab">
-        <div class="page-header">
-          <h1>Browse</h1>
-          <p>Explore your current follower and following lists.</p>
-        </div>
-        <div class="browse-filters">
-          <button class="filter-btn active" data-mode="nonfollowers">Don't follow back</button>
-          <button class="filter-btn" data-mode="followers">All followers</button>
-          <button class="filter-btn" data-mode="following">All following</button>
-        </div>
-        <input class="search-box" id="browse-search" type="search" placeholder="Search username...">
-        <div id="browse-content"></div>
-      </section>
-
-      <!-- History Tab -->
-      <section id="tab-history" class="tab">
-        <div class="page-header">
+    <!-- ── HISTORY ─────────────────────────────── -->
+    <section id="tab-history" class="tab">
+      <div class="history-header">
+        <div>
           <h1>Snapshot history</h1>
-          <p>All saved snapshots. Keep uploading periodically to track changes over time.</p>
+          <p>Upload periodically to track changes over time.</p>
         </div>
-        <div id="history-content"></div>
-        <button class="btn btn-danger" onclick="clearAll()" style="margin-top:1.5rem;">Delete all snapshots</button>
-      </section>
+        <button class="btn btn-danger" onclick="clearAll()">🗑 Clear all</button>
+      </div>
+      <div id="history-list"></div>
+    </section>
 
-    </main>
-  </div>
+  </div><!-- /page-wrap -->
 
   <script src="app.js"></script>
 </body>
