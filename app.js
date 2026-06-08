@@ -1,20 +1,25 @@
 // ── Storage ───────────────────────────────────────────
 function getSnaps() {
-  try { return JSON.parse(localStorage.getItem('followly_snaps') || '[]'); }
+  try { return JSON.parse(localStorage.getItem('followly_v3') || '[]'); }
   catch { return []; }
 }
-function setSnaps(s) { localStorage.setItem('followly_snaps', JSON.stringify(s)); }
+function setSnaps(s) { localStorage.setItem('followly_v3', JSON.stringify(s)); }
 
 // ── State ─────────────────────────────────────────────
 let pendingFollowers = null;
 let pendingFollowing = null;
 let browseMode = 'ghost';
 
-// ── Tab navigation ────────────────────────────────────
-document.querySelectorAll('.nav-btn').forEach(btn => {
+// ── Init ──────────────────────────────────────────────
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+updateMeta();
+renderDashboard();
+
+// ── Nav ───────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
     const tab = btn.dataset.tab;
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
@@ -25,17 +30,17 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 function goTab(name) {
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
   if (name === 'dashboard') renderDashboard();
   if (name === 'browse')    renderBrowse();
   if (name === 'history')   renderHistory();
 }
 
-// ── Browse filter pills ───────────────────────────────
-document.querySelectorAll('.pill').forEach(btn => {
+// ── Filter pills ──────────────────────────────────────
+document.querySelectorAll('.filter-pill').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     browseMode = btn.dataset.mode;
     renderBrowse();
@@ -53,9 +58,10 @@ function parseIG(text, type) {
   } else {
     items = Array.isArray(data) ? data : (data.relationships_following || data);
   }
+  if (!Array.isArray(items)) items = [];
   return items.flatMap(item => {
-    if (item.string_list_data) return item.string_list_data.map(x => x.value);
-    if (item.value) return [item.value];
+    if (item && item.string_list_data) return item.string_list_data.map(x => x.value).filter(Boolean);
+    if (item && item.value) return [item.value];
     return [];
   }).filter(Boolean);
 }
@@ -66,21 +72,21 @@ function loadFile(type, input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const dzEl = document.getElementById('dz-' + type);
-    const stEl = document.getElementById('st-' + type);
+    const dz = document.getElementById('dz-' + type);
+    const st = document.getElementById('st-' + type);
     try {
       const users = parseIG(e.target.result, type);
       if (!users.length) throw new Error('No users found');
       if (type === 'followers') pendingFollowers = users;
       else pendingFollowing = users;
-      stEl.textContent = '✓ ' + users.length.toLocaleString() + ' loaded';
-      stEl.className = 'dz-status ok';
-      dzEl.classList.add('loaded');
+      st.textContent = '✓ ' + users.length.toLocaleString() + ' users';
+      st.className = 'dz-status ok';
+      dz.classList.add('loaded');
       checkReady();
     } catch (err) {
-      stEl.textContent = '✗ ' + err.message;
-      stEl.className = 'dz-status err';
-      dzEl.classList.remove('loaded');
+      st.textContent = '✗ ' + err.message;
+      st.className = 'dz-status err';
+      dz.classList.remove('loaded');
     }
   };
   reader.readAsText(file);
@@ -90,13 +96,13 @@ document.getElementById('file-followers').addEventListener('change', function() 
 document.getElementById('file-following').addEventListener('change', function() { loadFile('following', this); });
 
 function checkReady() {
-  const ready = pendingFollowers && pendingFollowing;
+  const ready = !!(pendingFollowers && pendingFollowing);
   document.getElementById('btn-save').disabled = !ready;
   const a = document.getElementById('upload-alert');
   if (ready) {
     a.style.display = 'block';
-    a.className = 'alert alert-info';
-    a.textContent = '✓ Both files ready! Click "Save snapshot" to record this state.';
+    a.className = 'upload-alert info';
+    a.textContent = '⚡ Both files ready — save snapshot to record this state.';
   }
 }
 
@@ -106,10 +112,10 @@ function saveSnapshot() {
   snaps.unshift({ ts: Date.now(), followers: pendingFollowers, following: pendingFollowing });
   if (snaps.length > 50) snaps.length = 50;
   setSnaps(snaps);
-  updateSnapPill();
+  updateMeta();
   const a = document.getElementById('upload-alert');
-  a.className = 'alert alert-success';
-  a.textContent = '🎉 Snapshot saved! Go to Dashboard to see your stats.';
+  a.className = 'upload-alert success';
+  a.textContent = '✓ Snapshot saved! Head to Dashboard to see your stats.';
   document.getElementById('btn-save').disabled = true;
 }
 
@@ -122,7 +128,8 @@ function clearUpload() {
     st.textContent = ''; st.className = 'dz-status';
     document.getElementById('dz-' + t).classList.remove('loaded');
   });
-  document.getElementById('upload-alert').style.display = 'none';
+  const a = document.getElementById('upload-alert');
+  a.style.display = 'none';
   document.getElementById('btn-save').disabled = true;
 }
 
@@ -146,120 +153,120 @@ function renderDashboard() {
   const fSet   = new Set(latest.followers);
   const folSet = new Set(latest.following);
   const ghosts = latest.following.filter(u => !fSet.has(u));
-  const ratio  = latest.followers.length / Math.max(1, latest.following.length);
+  const ratio  = (latest.followers.length / Math.max(1, latest.following.length)).toFixed(2);
 
-  // Stat cards
-  setValue('sv-followers', latest.followers.length.toLocaleString());
-  setValue('sv-following', latest.following.length.toLocaleString());
-  setValue('sv-ghost', ghosts.length.toLocaleString());
-  setValue('sv-ratio', ratio.toFixed(2));
-  document.getElementById('ss-ratio').textContent =
-    ratio >= 1 ? '👍 More followers than following' : '⚠ Following more than followers';
+  // KPI values
+  setText('kv-followers', latest.followers.length.toLocaleString());
+  setText('kv-following', latest.following.length.toLocaleString());
+  setText('kv-ghost', ghosts.length.toLocaleString());
+  setText('kv-ratio', ratio);
+  const ratioNum = parseFloat(ratio);
+  setText('ks-ratio', ratioNum >= 1 ? '↑ Good standing' : '↓ Following more');
 
-  // Deltas vs previous snapshot
-  const sdF  = document.getElementById('sd-followers');
-  const sdFo = document.getElementById('sd-following');
+  // Deltas
+  const kdF  = document.getElementById('kd-followers');
+  const kdFo = document.getElementById('kd-following');
   if (prev) {
-    const df = latest.followers.length - prev.followers.length;
+    const df  = latest.followers.length - prev.followers.length;
     const dfo = latest.following.length - prev.following.length;
-    sdF.textContent  = (df >= 0 ? '+' : '') + df + ' since last snapshot';
-    sdF.className    = 'shc-delta ' + (df >= 0 ? 'up' : 'down');
-    sdFo.textContent = (dfo >= 0 ? '+' : '') + dfo + ' since last snapshot';
-    sdFo.className   = 'shc-delta ' + (dfo >= 0 ? 'up' : 'down');
+    kdF.textContent  = (df >= 0 ? '+' : '') + df + ' since last';
+    kdF.className    = 'kpi-delta ' + (df >= 0 ? 'up' : 'down');
+    kdFo.textContent = (dfo >= 0 ? '+' : '') + dfo + ' since last';
+    kdFo.className   = 'kpi-delta ' + (dfo >= 0 ? 'up' : 'down');
   } else {
-    sdF.textContent = ''; sdFo.textContent = '';
+    kdF.textContent = ''; kdFo.textContent = '';
   }
 
   // Changes section
+  const cWrap = document.getElementById('changes-wrap');
   const cGrid = document.getElementById('changes-grid');
-  const cTitle = document.getElementById('changes-title');
   if (prev) {
     const pF   = new Set(prev.followers);
     const pFol = new Set(prev.following);
-    const newF  = latest.followers.filter(u => !pF.has(u));
-    const lostF = prev.followers.filter(u => !fSet.has(u));
-    const newFo  = latest.following.filter(u => !pFol.has(u));
-    const lostFo = prev.following.filter(u => !folSet.has(u));
+    const newF   = latest.followers.filter(u => !pF.has(u));
+    const lostF  = prev.followers.filter(u => !fSet.has(u));
+    const newFol = latest.following.filter(u => !pFol.has(u));
+    const lostFol= prev.following.filter(u => !folSet.has(u));
 
-    cTitle.style.display = 'flex';
-    cTitle.textContent   = '📣 Changes since ' + new Date(prev.ts).toLocaleDateString();
-    cGrid.style.display  = 'grid';
+    setText('changes-since', 'vs ' + new Date(prev.ts).toLocaleDateString());
+    cWrap.style.display = 'block';
     cGrid.innerHTML =
-      changeCard('👋 New followers',      newF,  'badge-green') +
-      changeCard('💔 Unfollowed you',     lostF, 'badge-red') +
-      changeCard('➕ You started following', newFo, 'badge-cyan') +
-      changeCard('➖ You unfollowed',      lostFo,'badge-amber');
+      changeCard('New followers',        newF,   'chip-green') +
+      changeCard('Unfollowed you',       lostF,  'chip-red') +
+      changeCard('You started following',newFol, 'chip-cyan') +
+      changeCard('You unfollowed',       lostFol,'chip-violet');
   } else {
-    cTitle.style.display = 'none';
-    cGrid.style.display  = 'none';
+    cWrap.style.display = 'none';
   }
 
   // Ghost grid
-  document.getElementById('ghost-grid').innerHTML = ghosts.length
-    ? ghosts.map(u => profileCard(u)).join('')
-    : '<div class="grid-empty">🎉 Everyone follows you back!</div>';
+  setText('ghost-count-tag', ghosts.length.toLocaleString() + ' accounts');
+  const gg = document.getElementById('ghost-grid');
+  if (ghosts.length) {
+    gg.innerHTML = ghosts.map((u, i) => profileCard(u, i)).join('');
+  } else {
+    gg.innerHTML = '<div class="grid-empty">🎉 Everyone follows you back</div>';
+  }
 }
 
-function setValue(id, val) { document.getElementById(id).textContent = val; }
-
-function changeCard(title, users, badgeClass) {
-  if (!users.length) return `
-    <div class="change-card">
-      <div class="change-card-header">
-        <span class="change-card-title">${title}</span>
-        <span class="count-badge ${badgeClass}">0</span>
-      </div>
-      <div style="font-size:13px;color:var(--text-3);padding:4px 0;">No changes</div>
-    </div>`;
-
-  const rows = users.slice(0, 5).map(u => miniProfile(u)).join('');
-  const more = users.length > 5
-    ? `<div class="mini-more">+${users.length - 5} more</div>` : '';
-  return `
-    <div class="change-card">
-      <div class="change-card-header">
-        <span class="change-card-title">${title}</span>
-        <span class="count-badge ${badgeClass}">${users.length}</span>
-      </div>
-      <div class="mini-profile-list">${rows}${more}</div>
-    </div>`;
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
 }
 
-// ── Profile card (grid) ───────────────────────────────
-function profileCard(username) {
-  const initials = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
-  const url = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
-  return `
-    <div class="profile-card" onclick="window.open('${url}','_blank')">
-      <div class="pc-avatar">${initials}</div>
-      <div class="pc-name">@${esc(username)}</div>
-      <a class="pc-link-btn" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-        View on Instagram ↗
-      </a>
-    </div>`;
+// ── Change card ───────────────────────────────────────
+function changeCard(title, users, chipClass) {
+  const rows = users.length
+    ? users.slice(0, 5).map(u => miniRow(u)).join('') +
+      (users.length > 5 ? `<div class="mini-more">+${users.length - 5} more</div>` : '')
+    : `<div class="mini-none">No changes</div>`;
+
+  return `<div class="change-card">
+    <div class="change-card-head">
+      <span class="change-card-title">${esc(title)}</span>
+      <span class="chip ${chipClass}">${users.length}</span>
+    </div>
+    <div class="mini-list">${rows}</div>
+  </div>`;
 }
 
-// ── Mini profile row (inside change cards) ────────────
-function miniProfile(username) {
-  const initials = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
-  const url = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
-  return `
-    <a class="mini-profile" href="${url}" target="_blank" rel="noopener">
-      <div class="mini-avatar">${initials}</div>
-      <span class="mini-name">@${esc(username)}</span>
-      <span class="mini-arrow">↗</span>
-    </a>`;
+// ── Profile card ──────────────────────────────────────
+function profileCard(username, index = 0) {
+  const init = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
+  const url  = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
+  const delay = Math.min(index * 30, 600);
+  return `<div class="profile-card" style="animation-delay:${delay}ms" onclick="window.open('${url}','_blank')">
+    <div class="pc-avatar">
+      <div class="pc-avatar-ring"></div>
+      ${init}
+    </div>
+    <div class="pc-name">@${esc(username)}</div>
+    <a class="pc-open" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+      View ↗
+    </a>
+  </div>`;
+}
+
+// ── Mini row ──────────────────────────────────────────
+function miniRow(username) {
+  const init = username.replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase() || '??';
+  const url  = 'https://www.instagram.com/' + encodeURIComponent(username) + '/';
+  return `<a class="mini-row" href="${url}" target="_blank" rel="noopener">
+    <div class="mini-av">${init}</div>
+    <span class="mini-name">@${esc(username)}</span>
+    <span class="mini-arrow">↗</span>
+  </a>`;
 }
 
 // ── Browse ────────────────────────────────────────────
 function renderBrowse() {
-  const snaps = getSnaps();
-  const grid  = document.getElementById('browse-grid');
-  const count = document.getElementById('browse-count');
+  const snaps  = getSnaps();
+  const grid   = document.getElementById('browse-grid');
+  const count  = document.getElementById('browse-count');
 
   if (!snaps.length) {
     grid.innerHTML = '<div class="grid-empty">No snapshots yet. Upload your data first.</div>';
-    count.textContent = '';
+    count.textContent = 'No data';
     return;
   }
 
@@ -282,8 +289,10 @@ function renderBrowse() {
   }
 
   const shown = list.slice(0, 120);
-  grid.innerHTML = shown.map(u => profileCard(u)).join('') +
-    (list.length > 120 ? `<div class="grid-empty" style="grid-column:1/-1;">Showing 120 of ${list.length} — use search to narrow down</div>` : '');
+  grid.innerHTML = shown.map((u, i) => profileCard(u, i)).join('') +
+    (list.length > 120
+      ? `<div class="grid-empty" style="grid-column:1/-1">Showing 120 of ${list.length} — refine with search</div>`
+      : '');
 }
 
 // ── History ───────────────────────────────────────────
@@ -292,21 +301,20 @@ function renderHistory() {
   const list  = document.getElementById('history-list');
 
   if (!snaps.length) {
-    list.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-3);font-size:14px;font-weight:600;">No snapshots saved yet.</div>';
+    list.innerHTML = '<div class="grid-empty" style="display:block;text-align:center;padding:3rem;">No snapshots saved yet.</div>';
     return;
   }
 
   list.innerHTML = snaps.map((s, i) => `
     <div class="history-card">
-      <div class="hc-index">#${snaps.length - i}</div>
+      <span class="hc-num">#${snaps.length - i}</span>
       <div class="hc-info">
         <div class="hc-time">${new Date(s.ts).toLocaleString()}</div>
         <div class="hc-meta">${s.followers.length.toLocaleString()} followers · ${s.following.length.toLocaleString()} following</div>
       </div>
       ${i === 0
-        ? '<span class="hc-latest">Latest</span>'
-        : `<button class="hc-del" onclick="deleteSnap(${i})" title="Delete">✕</button>`
-      }
+        ? '<span class="hc-badge">Latest</span>'
+        : `<button class="hc-del" onclick="deleteSnap(${i})" title="Delete">✕</button>`}
     </div>`).join('');
 }
 
@@ -315,27 +323,24 @@ function deleteSnap(i) {
   const snaps = getSnaps();
   snaps.splice(i, 1);
   setSnaps(snaps);
-  updateSnapPill();
+  updateMeta();
   renderHistory();
 }
 
 function clearAll() {
   if (!confirm('Delete ALL snapshots? This cannot be undone.')) return;
-  localStorage.removeItem('followly_snaps');
-  updateSnapPill();
+  localStorage.removeItem('followly_v3');
+  updateMeta();
   renderHistory();
 }
 
 // ── Utilities ─────────────────────────────────────────
-function updateSnapPill() {
+function updateMeta() {
   const n = getSnaps().length;
-  document.getElementById('snap-pill').textContent = n + (n === 1 ? ' snapshot' : ' snapshots');
+  const el = document.getElementById('snap-count-side');
+  if (el) el.textContent = n + (n === 1 ? ' snapshot' : ' snapshots');
 }
 
-function esc(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
-// ── Init ──────────────────────────────────────────────
-updateSnapPill();
-renderDashboard();
