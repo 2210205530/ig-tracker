@@ -14,9 +14,18 @@
 <canvas id="orb-canvas"></canvas>
 <div class="noise-overlay"></div>
 
+<!-- Change alert banner -->
+<div class="alert-banner" id="alert-banner" style="display:none">
+  <div class="alert-inner">
+    <span class="alert-icon">⚡</span>
+    <span id="alert-text"></span>
+    <button class="alert-close" onclick="dismissAlert()">✕</button>
+  </div>
+</div>
+
 <div class="app-layout">
 
-  <!-- ════ SIDEBAR ════ -->
+  <!-- ══ SIDEBAR ══════════════════════════════════ -->
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-gem">
@@ -28,43 +37,46 @@
         <div class="brand-sub">Instagram Tracker</div>
       </div>
     </div>
+
     <div class="sidebar-divider"></div>
+
     <nav class="sidebar-nav">
       <button class="nav-btn active" data-tab="dashboard">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
-        <span>Dashboard</span><span class="nav-active-bar"></span>
+        <span>Dashboard</span><span class="nav-bar"></span>
       </button>
       <button class="nav-btn" data-tab="upload">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="13 6 10 3 7 6"/><line x1="10" y1="3" x2="10" y2="13"/></svg>
-        <span>Upload</span><span class="nav-active-bar"></span>
+        <span>Upload</span><span class="nav-bar"></span>
       </button>
       <button class="nav-btn" data-tab="browse">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><line x1="15.5" y1="15.5" x2="19" y2="19"/></svg>
-        <span>Browse</span><span class="nav-active-bar"></span>
+        <span>Browse</span><span class="nav-bar"></span>
       </button>
       <button class="nav-btn" data-tab="history">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><polyline points="10 5 10 10 14 12"/></svg>
-        <span>History</span><span class="nav-active-bar"></span>
+        <span>History</span><span class="nav-bar"></span>
       </button>
     </nav>
+
     <div class="sidebar-footer">
       <div class="status-row">
         <span class="status-dot"></span>
-        <span id="snap-count-label">0 snapshots saved</span>
+        <span id="snap-count-label">0 snapshots</span>
       </div>
-      <div class="status-sub">Data stored locally · never leaves your device</div>
+      <div class="status-sub">Stored locally · never leaves your device</div>
     </div>
   </aside>
 
-  <!-- ════ MAIN ════ -->
+  <!-- ══ MAIN ══════════════════════════════════════ -->
   <main class="main-content">
 
-    <!-- DASHBOARD -->
+    <!-- ─── DASHBOARD ───────────────────────────── -->
     <section id="tab-dashboard" class="tab active">
       <div class="page-header">
         <div>
           <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle" id="dash-subtitle">—</p>
+          <p class="page-subtitle" id="dash-subtitle"></p>
         </div>
         <button class="btn-ghost" onclick="goTab('upload')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/><polyline points="11 4 8 1 5 4"/><line x1="8" y1="1" x2="8" y2="10"/></svg>
@@ -72,6 +84,7 @@
         </button>
       </div>
 
+      <!-- Empty -->
       <div id="dash-empty" class="empty-wrap">
         <div class="empty-icon-box">
           <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M32 42v-4a8 8 0 0 0-8-8H12a8 8 0 0 0-8 8v4"/><circle cx="18" cy="16" r="8"/><path d="M44 42v-4a8 8 0 0 0-6-7.74"/><path d="M32 6.26a8 8 0 0 1 0 15.5"/></svg>
@@ -81,7 +94,10 @@
         <button class="btn-primary" onclick="goTab('upload')">Upload your data</button>
       </div>
 
+      <!-- Content -->
       <div id="dash-content" style="display:none">
+
+        <!-- KPI strip -->
         <div class="kpi-strip">
           <div class="kpi-card">
             <p class="kpi-label">Followers</p>
@@ -100,11 +116,12 @@
           </div>
           <div class="kpi-card kpi-info">
             <p class="kpi-label">You don't follow back</p>
-            <p class="kpi-number" id="kpi-unfollowed">—</p>
+            <p class="kpi-number" id="kpi-ydnfb">—</p>
             <p class="kpi-note">of your followers</p>
           </div>
         </div>
 
+        <!-- Changes -->
         <div id="changes-wrap" style="display:none">
           <div class="section-header">
             <h2 class="section-title">Changes</h2>
@@ -113,21 +130,42 @@
           <div class="change-grid" id="change-grid"></div>
         </div>
 
+        <!-- Grid 1: Not following back -->
         <div class="section-header" style="margin-top:2.5rem">
           <h2 class="section-title">You follow — they don't follow back</h2>
           <span class="section-badge" id="badge-nfb"></span>
         </div>
+        <div class="grid-controls">
+          <input class="grid-search" type="search" id="search-nfb" placeholder="Search…" oninput="renderGrid('nfb')">
+          <div class="sort-pills">
+            <button class="sort-pill active" data-grid="nfb" data-sort="az" onclick="setSort('nfb','az',this)">A–Z</button>
+            <button class="sort-pill" data-grid="nfb" data-sort="za" onclick="setSort('nfb','za',this)">Z–A</button>
+          </div>
+          <button class="whitelist-toggle" id="wl-toggle" onclick="toggleWhitelistMode()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 1l1.8 3.6L14 5.3l-3 2.9.7 4.1L8 10.1l-3.7 2.2.7-4.1L2 5.3l4.2-.7z"/></svg>
+            Manage whitelist
+          </button>
+        </div>
         <div class="profile-grid" id="grid-nfb"></div>
 
+        <!-- Grid 2: You don't follow back -->
         <div class="section-header" style="margin-top:3rem">
           <h2 class="section-title">They follow you — you don't follow back</h2>
-          <span class="section-badge" id="badge-unfollowed"></span>
+          <span class="section-badge" id="badge-ydnfb"></span>
         </div>
-        <div class="profile-grid" id="grid-unfollowed"></div>
+        <div class="grid-controls">
+          <input class="grid-search" type="search" id="search-ydnfb" placeholder="Search…" oninput="renderGrid('ydnfb')">
+          <div class="sort-pills">
+            <button class="sort-pill active" data-grid="ydnfb" data-sort="az" onclick="setSort('ydnfb','az',this)">A–Z</button>
+            <button class="sort-pill" data-grid="ydnfb" data-sort="za" onclick="setSort('ydnfb','za',this)">Z–A</button>
+          </div>
+        </div>
+        <div class="profile-grid" id="grid-ydnfb"></div>
+
       </div>
     </section>
 
-    <!-- UPLOAD -->
+    <!-- ─── UPLOAD ────────────────────────────── -->
     <section id="tab-upload" class="tab">
       <div class="page-header">
         <div>
@@ -135,64 +173,39 @@
           <p class="page-subtitle">Import your Instagram JSON export files</p>
         </div>
       </div>
-
       <div class="upload-container">
-
         <div class="howto-box">
           <p class="howto-label">How to export from Instagram</p>
           <ol class="howto-list">
             <li>Open Instagram → tap your <strong>profile</strong> → top-right <strong>menu (☰)</strong> → <strong>Settings &amp; privacy</strong></li>
             <li>Scroll to <strong>Your activity</strong> → <strong>Download your information</strong> → <strong>Download or transfer information</strong></li>
             <li>Select your account → <strong>Some of your information</strong> → check <strong>Followers and following</strong></li>
-            <li>Choose <strong>Download to device</strong> → select <strong>JSON</strong> format → <strong>Create files</strong></li>
-            <li>Instagram emails you a zip — unzip it. You will find <strong>multiple followers files</strong> (followers_1.json, followers_2.json, etc.)</li>
-            <li>Click the Followers zone below and <strong>select ALL followers files at once</strong> · then upload following.json separately</li>
+            <li>Choose <strong>Download to device</strong> → select <strong>JSON</strong> format → tap <strong>Create files</strong></li>
+            <li>Instagram emails you a link — download the zip, unzip it, then upload <code>followers_1.json</code> and <code>following.json</code> below</li>
           </ol>
         </div>
-
-        <!-- Upload zones -->
         <div class="drop-row">
-
-          <!-- FOLLOWERS — accepts multiple files -->
           <label class="drop-zone" id="dz-followers" for="inp-followers">
             <div class="drop-icon">
               <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M28 38v-4a8 8 0 0 0-8-8H8a8 8 0 0 0-8 8v4"/><circle cx="14" cy="12" r="8"/></svg>
             </div>
-            <p class="drop-title">All Followers files</p>
-            <p class="drop-filename">followers_1.json, followers_2.json…</p>
-            <p class="drop-hint">Select ALL files at once (Ctrl+A)</p>
+            <p class="drop-title">Followers file</p>
+            <p class="drop-filename">followers_1.json</p>
             <p class="drop-status" id="st-followers"></p>
-            <input type="file" id="inp-followers" accept=".json" multiple
-              onchange="handleFilesFollowers(this)">
+            <input type="file" id="inp-followers" accept=".json" onchange="handleFile('followers',this)">
           </label>
-
           <div class="drop-plus">+</div>
-
-          <!-- FOLLOWING — single file -->
           <label class="drop-zone" id="dz-following" for="inp-following">
             <div class="drop-icon">
               <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M26 18c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM14 18c2.76 0 5-2.24 5-5S16.76 8 14 8s-5 2.24-5 5 2.24 5 5 5zm0 4c-3.87 0-12 1.95-12 5.83V32h24v-4.17c0-3.88-8.13-5.83-12-5.83zm12 0c-.48 0-1.03.03-1.62.08C26.24 23.41 28 25.15 28 27.83V32h10v-4.17c0-3.88-8.13-5.83-12-5.83z"/></svg>
             </div>
             <p class="drop-title">Following file</p>
             <p class="drop-filename">following.json</p>
-            <p class="drop-hint">Single file</p>
             <p class="drop-status" id="st-following"></p>
-            <input type="file" id="inp-following" accept=".json"
-              onchange="handleFilesFollowing(this)">
+            <input type="file" id="inp-following" accept=".json" onchange="handleFile('following',this)">
           </label>
-
         </div>
-
-        <!-- Progress bar (shown while reading many files) -->
-        <div id="progress-wrap" class="progress-wrap" style="display:none">
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="progress-fill"></div>
-          </div>
-          <p class="progress-label" id="progress-label">Reading files…</p>
-        </div>
-
         <div id="upload-msg" class="upload-msg" style="display:none"></div>
-
         <div class="upload-actions">
           <button class="btn-primary" id="btn-save" disabled onclick="saveSnapshot()">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7.5L14 5.5V13a1 1 0 0 1-1 1z"/><polyline points="11 14 11 9 5 9 5 14"/><polyline points="5 2 5 5 10 5"/></svg>
@@ -203,7 +216,7 @@
       </div>
     </section>
 
-    <!-- BROWSE -->
+    <!-- ─── BROWSE ────────────────────────────── -->
     <section id="tab-browse" class="tab">
       <div class="page-header">
         <div>
@@ -215,16 +228,23 @@
           <input type="search" id="browse-search" placeholder="Search username…" oninput="renderBrowse()">
         </div>
       </div>
-      <div class="filter-bar" id="filter-bar">
-        <button class="filter-pill active" data-mode="nfb">Not following back</button>
+      <div class="filter-bar">
+        <button class="filter-pill active" data-mode="nfb">Not following you back</button>
         <button class="filter-pill" data-mode="ydnfb">You don't follow back</button>
         <button class="filter-pill" data-mode="followers">All followers</button>
         <button class="filter-pill" data-mode="following">All following</button>
+        <button class="filter-pill" data-mode="whitelist">Whitelist</button>
+      </div>
+      <div class="browse-sort-row">
+        <div class="sort-pills">
+          <button class="sort-pill active" data-grid="browse" data-sort="az" onclick="setSort('browse','az',this)">A–Z</button>
+          <button class="sort-pill" data-grid="browse" data-sort="za" onclick="setSort('browse','za',this)">Z–A</button>
+        </div>
       </div>
       <div class="profile-grid" id="browse-grid"></div>
     </section>
 
-    <!-- HISTORY -->
+    <!-- ─── HISTORY ───────────────────────────── -->
     <section id="tab-history" class="tab">
       <div class="page-header">
         <div>
@@ -242,7 +262,46 @@
   </main>
 </div>
 
+<!-- Label modal -->
+<div class="modal-overlay" id="label-modal" style="display:none" onclick="closeLabelModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-avatar" id="modal-avatar"></div>
+      <div>
+        <p class="modal-username" id="modal-username"></p>
+        <p class="modal-sub">Choose a label</p>
+      </div>
+      <button class="modal-close" onclick="closeLabelModal()">✕</button>
+    </div>
+    <div class="label-options">
+      <button class="label-opt" data-label="friend" onclick="applyLabel('friend')">
+        <span class="label-dot" style="background:#4ade80"></span>Friend
+      </button>
+      <button class="label-opt" data-label="bot" onclick="applyLabel('bot')">
+        <span class="label-dot" style="background:#f87171"></span>Bot
+      </button>
+      <button class="label-opt" data-label="business" onclick="applyLabel('business')">
+        <span class="label-dot" style="background:#818cf8"></span>Business
+      </button>
+      <button class="label-opt" data-label="celebrity" onclick="applyLabel('celebrity')">
+        <span class="label-dot" style="background:#f472b6"></span>Celebrity
+      </button>
+      <button class="label-opt" data-label="" onclick="applyLabel('')">
+        <span class="label-dot" style="background:rgba(255,255,255,0.2)"></span>No label
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="toggleWhitelist(currentModalUser)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 1l1.8 3.6L14 5.3l-3 2.9.7 4.1L8 10.1l-3.7 2.2.7-4.1L2 5.3l4.2-.7z"/></svg>
+        <span id="wl-modal-btn-text">Add to whitelist</span>
+      </button>
+      <a class="btn-primary" id="modal-ig-link" href="#" target="_blank" rel="noopener noreferrer">
+        Open on Instagram ↗
+      </a>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
-
