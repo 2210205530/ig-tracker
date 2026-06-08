@@ -11,13 +11,12 @@
 </head>
 <body>
 
-<!-- Ambient layer -->
 <canvas id="orb-canvas"></canvas>
 <div class="noise-overlay"></div>
 
 <div class="app-layout">
 
-  <!-- ════════════════ SIDEBAR ════════════════ -->
+  <!-- ════ SIDEBAR ════ -->
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-gem">
@@ -29,32 +28,25 @@
         <div class="brand-sub">Instagram Tracker</div>
       </div>
     </div>
-
     <div class="sidebar-divider"></div>
-
     <nav class="sidebar-nav">
       <button class="nav-btn active" data-tab="dashboard">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
-        <span>Dashboard</span>
-        <span class="nav-active-bar"></span>
+        <span>Dashboard</span><span class="nav-active-bar"></span>
       </button>
       <button class="nav-btn" data-tab="upload">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3"/><polyline points="13 6 10 3 7 6"/><line x1="10" y1="3" x2="10" y2="13"/></svg>
-        <span>Upload</span>
-        <span class="nav-active-bar"></span>
+        <span>Upload</span><span class="nav-active-bar"></span>
       </button>
       <button class="nav-btn" data-tab="browse">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><line x1="15.5" y1="15.5" x2="19" y2="19"/></svg>
-        <span>Browse</span>
-        <span class="nav-active-bar"></span>
+        <span>Browse</span><span class="nav-active-bar"></span>
       </button>
       <button class="nav-btn" data-tab="history">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><polyline points="10 5 10 10 14 12"/></svg>
-        <span>History</span>
-        <span class="nav-active-bar"></span>
+        <span>History</span><span class="nav-active-bar"></span>
       </button>
     </nav>
-
     <div class="sidebar-footer">
       <div class="status-row">
         <span class="status-dot"></span>
@@ -64,12 +56,11 @@
     </div>
   </aside>
 
-  <!-- ════════════════ MAIN ════════════════════ -->
+  <!-- ════ MAIN ════ -->
   <main class="main-content">
 
-    <!-- ─── DASHBOARD ─────────────────────────── -->
+    <!-- DASHBOARD -->
     <section id="tab-dashboard" class="tab active">
-
       <div class="page-header">
         <div>
           <h1 class="page-title">Dashboard</h1>
@@ -81,20 +72,16 @@
         </button>
       </div>
 
-      <!-- Empty -->
       <div id="dash-empty" class="empty-wrap">
         <div class="empty-icon-box">
           <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M32 42v-4a8 8 0 0 0-8-8H12a8 8 0 0 0-8 8v4"/><circle cx="18" cy="16" r="8"/><path d="M44 42v-4a8 8 0 0 0-6-7.74"/><path d="M32 6.26a8 8 0 0 1 0 15.5"/></svg>
         </div>
         <h2 class="empty-title">No data yet</h2>
-        <p class="empty-desc">Upload your Instagram data export to start tracking followers, changes, and who isn't following you back.</p>
+        <p class="empty-desc">Upload your Instagram data export to start tracking followers and changes over time.</p>
         <button class="btn-primary" onclick="goTab('upload')">Upload your data</button>
       </div>
 
-      <!-- Content -->
       <div id="dash-content" style="display:none">
-
-        <!-- KPI strip -->
         <div class="kpi-strip">
           <div class="kpi-card">
             <p class="kpi-label">Followers</p>
@@ -118,7 +105,6 @@
           </div>
         </div>
 
-        <!-- Changes (2+ snapshots only) -->
         <div id="changes-wrap" style="display:none">
           <div class="section-header">
             <h2 class="section-title">Changes</h2>
@@ -127,24 +113,21 @@
           <div class="change-grid" id="change-grid"></div>
         </div>
 
-        <!-- Grid: Not following back -->
         <div class="section-header" style="margin-top:2.5rem">
           <h2 class="section-title">You follow — they don't follow back</h2>
           <span class="section-badge" id="badge-nfb"></span>
         </div>
         <div class="profile-grid" id="grid-nfb"></div>
 
-        <!-- Grid: You don't follow back -->
         <div class="section-header" style="margin-top:3rem">
           <h2 class="section-title">They follow you — you don't follow back</h2>
           <span class="section-badge" id="badge-unfollowed"></span>
         </div>
         <div class="profile-grid" id="grid-unfollowed"></div>
-
       </div>
     </section>
 
-    <!-- ─── UPLOAD ────────────────────────────── -->
+    <!-- UPLOAD -->
     <section id="tab-upload" class="tab">
       <div class="page-header">
         <div>
@@ -160,34 +143,52 @@
           <ol class="howto-list">
             <li>Open Instagram → tap your <strong>profile</strong> → top-right <strong>menu (☰)</strong> → <strong>Settings &amp; privacy</strong></li>
             <li>Scroll to <strong>Your activity</strong> → <strong>Download your information</strong> → <strong>Download or transfer information</strong></li>
-            <li>Select your account → choose <strong>Some of your information</strong> → check <strong>Followers and following</strong></li>
-            <li>Choose <strong>Download to device</strong> → select <strong>JSON</strong> format → tap <strong>Create files</strong></li>
-            <li>Instagram emails you a link — download the zip, unzip it, then upload <code>followers_1.json</code> and <code>following.json</code> below</li>
+            <li>Select your account → <strong>Some of your information</strong> → check <strong>Followers and following</strong></li>
+            <li>Choose <strong>Download to device</strong> → select <strong>JSON</strong> format → <strong>Create files</strong></li>
+            <li>Instagram emails you a zip — unzip it. You will find <strong>multiple followers files</strong> (followers_1.json, followers_2.json, etc.)</li>
+            <li>Click the Followers zone below and <strong>select ALL followers files at once</strong> · then upload following.json separately</li>
           </ol>
         </div>
 
+        <!-- Upload zones -->
         <div class="drop-row">
+
+          <!-- FOLLOWERS — accepts multiple files -->
           <label class="drop-zone" id="dz-followers" for="inp-followers">
             <div class="drop-icon">
               <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M28 38v-4a8 8 0 0 0-8-8H8a8 8 0 0 0-8 8v4"/><circle cx="14" cy="12" r="8"/></svg>
             </div>
-            <p class="drop-title">Followers file</p>
-            <p class="drop-filename">followers_1.json</p>
+            <p class="drop-title">All Followers files</p>
+            <p class="drop-filename">followers_1.json, followers_2.json…</p>
+            <p class="drop-hint">Select ALL files at once (Ctrl+A)</p>
             <p class="drop-status" id="st-followers"></p>
-            <input type="file" id="inp-followers" accept=".json" onchange="handleFile('followers',this)">
+            <input type="file" id="inp-followers" accept=".json" multiple
+              onchange="handleFilesFollowers(this)">
           </label>
 
           <div class="drop-plus">+</div>
 
+          <!-- FOLLOWING — single file -->
           <label class="drop-zone" id="dz-following" for="inp-following">
             <div class="drop-icon">
               <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M26 18c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM14 18c2.76 0 5-2.24 5-5S16.76 8 14 8s-5 2.24-5 5 2.24 5 5 5zm0 4c-3.87 0-12 1.95-12 5.83V32h24v-4.17c0-3.88-8.13-5.83-12-5.83zm12 0c-.48 0-1.03.03-1.62.08C26.24 23.41 28 25.15 28 27.83V32h10v-4.17c0-3.88-8.13-5.83-12-5.83z"/></svg>
             </div>
             <p class="drop-title">Following file</p>
             <p class="drop-filename">following.json</p>
+            <p class="drop-hint">Single file</p>
             <p class="drop-status" id="st-following"></p>
-            <input type="file" id="inp-following" accept=".json" onchange="handleFile('following',this)">
+            <input type="file" id="inp-following" accept=".json"
+              onchange="handleFilesFollowing(this)">
           </label>
+
+        </div>
+
+        <!-- Progress bar (shown while reading many files) -->
+        <div id="progress-wrap" class="progress-wrap" style="display:none">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+          </div>
+          <p class="progress-label" id="progress-label">Reading files…</p>
         </div>
 
         <div id="upload-msg" class="upload-msg" style="display:none"></div>
@@ -202,7 +203,7 @@
       </div>
     </section>
 
-    <!-- ─── BROWSE ────────────────────────────── -->
+    <!-- BROWSE -->
     <section id="tab-browse" class="tab">
       <div class="page-header">
         <div>
@@ -214,18 +215,16 @@
           <input type="search" id="browse-search" placeholder="Search username…" oninput="renderBrowse()">
         </div>
       </div>
- 
       <div class="filter-bar" id="filter-bar">
-        <button class="filter-pill active" data-mode="nfb">You follow — not following back</button>
-        <button class="filter-pill" data-mode="ydnfb">They follow — you don't follow back</button>
+        <button class="filter-pill active" data-mode="nfb">Not following back</button>
+        <button class="filter-pill" data-mode="ydnfb">You don't follow back</button>
         <button class="filter-pill" data-mode="followers">All followers</button>
         <button class="filter-pill" data-mode="following">All following</button>
       </div>
-
       <div class="profile-grid" id="browse-grid"></div>
     </section>
 
-    <!-- ─── HISTORY ───────────────────────────── -->
+    <!-- HISTORY -->
     <section id="tab-history" class="tab">
       <div class="page-header">
         <div>
@@ -246,3 +245,4 @@
 <script src="app.js"></script>
 </body>
 </html>
+
