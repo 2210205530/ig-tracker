@@ -484,6 +484,7 @@ body{
 .drop-zone.loaded .drop-icon{color:var(--green);border-color:var(--green-b);}
 .drop-title{font-family:var(--serif);font-size:16px;font-weight:400;color:var(--text);}
 .drop-filename{font-family:var(--mono);font-size:10px;color:var(--text-3);letter-spacing:0.04em;}
+.drop-hint{font-size:11px;color:var(--indigo);font-weight:500;letter-spacing:0.02em;}
 .drop-status{font-family:var(--mono);font-size:11px;min-height:16px;}
 .drop-status.ok{color:var(--green);}
 .drop-status.err{color:var(--red);}
@@ -562,6 +563,40 @@ body{
 }
 .hc-del:hover{background:var(--red-d);color:var(--red);border-color:var(--red-b);}
 
+
+/* ── Progress bar ─────────────────────────────────── */
+.progress-wrap{margin-bottom:1rem;}
+.progress-bar-track{
+  height:3px;background:var(--border);border-radius:2px;
+  overflow:hidden;margin-bottom:6px;
+}
+.progress-bar-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--pink),var(--indigo));
+  border-radius:2px;
+  transition:width 0.15s ease;
+}
+.progress-label{
+  font-family:var(--mono);font-size:11px;color:var(--text-3);
+  letter-spacing:0.04em;
+}
+
+/* ── Drop hint ────────────────────────────────────── */
+.drop-hint{
+  font-size:11px;color:var(--indigo);font-weight:500;
+  letter-spacing:0.02em;
+}
+
+/* ── Show more button ─────────────────────────────── */
+.show-more-wrap{
+  display:flex;justify-content:center;
+  padding:1rem 0;
+}
+.show-more-btn{
+  font-size:12px;padding:9px 24px;
+  border-color:var(--border-hi);color:var(--text-2);
+}
+
 /* ── Responsive ───────────────────────────────────── */
 @media(max-width:860px){
   .app-layout{flex-direction:column;}
@@ -591,3 +626,4 @@ body{
   .kpi-strip{grid-template-columns:1fr 1fr;}
   .kpi-number{font-size:32px;}
 }
+
